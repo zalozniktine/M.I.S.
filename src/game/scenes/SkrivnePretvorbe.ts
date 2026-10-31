@@ -22,6 +22,7 @@ export class SkrivnePretvorbe extends Scene {
     altars: { area: Phaser.Geom.Ellipse; sequence: string[]; slots: Phaser.GameObjects.Sprite[]; filled: number }[] = [];
 
     isFinished: boolean = false;
+    isIntroOpen: boolean = false;
 
     cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
     wasd!: {
@@ -37,6 +38,7 @@ export class SkrivnePretvorbe extends Scene {
     create() {
         this.isFinished = false;
         this.heldNumeral = null;
+        this.numerals = [];
 
         const map = this.make.tilemap({ key: 'map' });
 
@@ -178,7 +180,7 @@ export class SkrivnePretvorbe extends Scene {
                 if (!hitsWall && !hitsOther && !nearPlayer) {
                     placed.push(rect);
                     this.numerals.push(
-                        this.add.sprite(x + size / 2, y + size / 2, key).setOrigin(0.5, 0.5).setScale(numeralScale).setDepth(map.layers.length)
+                        this.add.sprite(x + size / 2, y + size / 2, key).setOrigin(0.5, 0.5).setScale(numeralScale).setDepth(map.layers.length + 1)
                     );
                     break;
                 }
@@ -188,14 +190,111 @@ export class SkrivnePretvorbe extends Scene {
         const cam = this.cameras.main;
         cam.setBounds(0, 0, mapWidth, mapHeight);
         cam.setZoom(2);
-        cam.startFollow(this.player, true)
+        cam.setRoundPixels(false);
+        cam.startFollow(this.player, false);
         cam.centerOn(this.player.x, this.player.y);
         this.cursors = this.input.keyboard!.createCursorKeys();
         this.wasd = this.input.keyboard!.addKeys('W,A,S,D') as any;
         this.spaceKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+
+        const updateHeldNumeral = () => {
+            if (!this.heldNumeral) return;
+            const mouthDist = 20;
+            const rot = this.player.rotation;
+            this.heldNumeral.setPosition(
+                this.player.x - Math.sin(rot) * mouthDist,
+                this.player.y + Math.cos(rot) * mouthDist
+            );
+            this.heldNumeral.setDepth(map.layers.length + 1);
+            this.tryPlaceOnAltar(this.heldNumeral);
+        };
+        this.events.on(Phaser.Scenes.Events.POST_UPDATE, updateHeldNumeral);
+        this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+            this.events.off(Phaser.Scenes.Events.POST_UPDATE, updateHeldNumeral);
+        });
+
+        this.showIntro();
     }
+
+    showIntro() {
+        this.isIntroOpen = true;
+        const cx = this.cameras.main.width / 2;
+        const cy = this.cameras.main.height / 2;
+
+        const shade = this.add.rectangle(cx, cy, 512, 384, 0x000000, 0.45)
+            .setScrollFactor(0).setDepth(200);
+        const bg = this.add.rectangle(cx, cy, 420, 260, 0x1e1e2e, 0.96)
+            .setStrokeStyle(2, 0xffd23f).setScrollFactor(0).setDepth(200);
+
+        const title = this.add.text(cx, cy - 95, 'Skrivne pretvorbe', {
+            fontSize: '16px',
+            fontFamily: 'Arial, sans-serif',
+            color: '#ffd23f',
+            fontStyle: 'bold',
+            resolution: 3
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(201);
+
+        const subtitle = this.add.text(
+            cx,
+            cy - 65,
+            'Pomagaj miški pretvoriti števila v rimske številke!\n\n' +
+            'Po mapi so razpršene škatle z rimskimi števili (I, V, X), ki jih miška pobere ' +
+            'ali odloži s Space in jih prinese do oltarjev s števili v pravem vrstnem redu.\n\n' +
+            'Za uspešen konec igre moraš pravilno pretvoriti vsa 3 števila.\n' +
+            'Premikaš se s tipkami WASD ali puščicami.',
+            {
+                fontSize: '10px',
+                fontFamily: 'Arial, sans-serif',
+                color: '#ffffff',
+                align: 'center',
+                wordWrap: { width: 380 },
+                lineSpacing: 4,
+                resolution: 3
+            }
+        ).setOrigin(0.5, 0).setScrollFactor(0).setDepth(201);
+
+        const btnRect = this.add.rectangle(cx, cy + 90, 130, 26, 0x3b3b5c)
+            .setStrokeStyle(1, 0xffffff)
+            .setScrollFactor(0)
+            .setDepth(201)
+            .setInteractive({ useHandCursor: true });
+
+        const btnText = this.add.text(cx, cy + 90, 'Začni (Enter)', {
+            fontSize: '11px',
+            fontFamily: 'Arial, sans-serif',
+            color: '#ffffff',
+            resolution: 3
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(202);
+
+        const closeIntro = () => {
+            if (!this.isIntroOpen) return;
+            this.isIntroOpen = false;
+            Phaser.Input.Keyboard.JustDown(this.spaceKey);
+            this.input.keyboard?.off('keydown', onKey);
+            shade.destroy();
+            bg.destroy();
+            title.destroy();
+            subtitle.destroy();
+            btnRect.destroy();
+            btnText.destroy();
+        };
+
+        const onKey = (event: KeyboardEvent) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+                closeIntro();
+            }
+        };
+
+        btnRect.on('pointerover', () => btnRect.setFillStyle(0x56568a));
+        btnRect.on('pointerout', () => btnRect.setFillStyle(0x3b3b5c));
+        btnRect.on('pointerdown', () => this.time.delayedCall(0, closeIntro));
+
+        this.input.keyboard!.on('keydown', onKey);
+        this.events.once('shutdown', () => this.input.keyboard?.off('keydown', onKey));
+    }
+
     update() {
-        if (this.isFinished) {
+        if (this.isFinished || this.isIntroOpen) {
             this.player.setVelocity(0, 0);
             return;
         }
@@ -246,18 +345,6 @@ export class SkrivnePretvorbe extends Scene {
             const angleDeg = Math.atan2(-vx, vy) * (180 / Math.PI);
             this.player.setAngle(angleDeg);
         }
-
-        if (this.heldNumeral) {
-            const mouthDist = 20;
-            const rot = this.player.rotation;
-            this.heldNumeral.setPosition(
-                this.player.x - Math.sin(rot) * mouthDist,
-                this.player.y + Math.cos(rot) * mouthDist
-            );
-            this.heldNumeral.setDepth(5);
-
-            this.tryPlaceOnAltar(this.heldNumeral);
-        }
     }
 
     tryPlaceOnAltar(numeral: Phaser.GameObjects.Sprite) {
@@ -284,33 +371,33 @@ export class SkrivnePretvorbe extends Scene {
         const cx = this.cameras.main.width / 2;
         const cy = this.cameras.main.height / 2;
 
-        this.add.rectangle(cx, cy, 360, 130, 0x000000, 0.8)
+        this.add.rectangle(cx, cy, 420, 150, 0x1e1e2e, 0.96)
             .setScrollFactor(0)
             .setOrigin(0.5, 0.5)
-            .setStrokeStyle(3, 0xffff00)
+            .setStrokeStyle(2, 0xffd23f)
             .setDepth(200);
 
-        this.add.text(cx, cy - 18, 'Bravo, končal si!', {
-            fontSize: '26px',
+        this.add.text(cx, cy - 30, 'Čestitke!', {
+            fontSize: '20px',
             fontFamily: 'Arial, sans-serif',
-            color: '#ffff00',
+            color: '#ffd23f',
             stroke: '#000000',
-            strokeThickness: 4,
+            strokeThickness: 3,
             fontStyle: 'bold',
             resolution: 3
         }).setScrollFactor(0).setOrigin(0.5, 0.5).setDepth(201);
 
-        this.add.text(cx, cy + 24, 'Igra se bo ponovno zagnala...', {
-            fontSize: '15px',
+        this.add.text(cx, cy + 5, 'Uspešno in pravilno si pretvoril vsa števila!', {
+            fontSize: '12px',
             fontFamily: 'Arial, sans-serif',
             color: '#ffffff',
-            stroke: '#000000',
-            strokeThickness: 3,
+            align: 'center',
+            wordWrap: { width: 380 },
             resolution: 3
         }).setScrollFactor(0).setOrigin(0.5, 0.5).setDepth(201);
 
-        this.time.delayedCall(3000, () => {
-            this.scene.restart();
+        this.time.delayedCall(5000, () => {
+            this.scene.start('Game', { roomKey: 'SobaSkrivnePretvorbe', spawnX: 12, spawnY: 6, angle: 0 });
         });
     }
 
