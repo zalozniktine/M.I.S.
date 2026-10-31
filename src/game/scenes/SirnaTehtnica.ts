@@ -1,5 +1,7 @@
 import * as Phaser from 'phaser';
 import { Scene } from 'phaser';
+import { enablePauseMenu } from './PauseMenu';
+import { completeLevel } from './Progress';
 /// definicija nivojev, tipov krogov in številskih vrst
 type Level = 1 | 2;
 type RoundType = 'tehtnica' | 'poltrak' | 'enakovredni' | 'urejanje';
@@ -175,6 +177,7 @@ export class SirnaTehtnica extends Scene {
 
     create() {
         /// scene.restart() uporabi isto instanco, zato stanje ponastavimo tukaj
+        enablePauseMenu(this, { returnRoom: 'SobaSirnaTehtnica', spawnX: 1, spawnY: 5 });
         this.level = 1;
         this.roundIndex = 0;
         this.mistakes = 0;
@@ -1188,6 +1191,7 @@ export class SirnaTehtnica extends Scene {
     /// konec igre
 
     finishGame() {
+        completeLevel('SirnaTehtnica', this.level);
         this.clearRound();
         this.instruction.setText('');
 
@@ -1210,6 +1214,6 @@ export class SirnaTehtnica extends Scene {
 
     returnToMainGame() {
         this.closePanel();
-        this.scene.start('Game', { roomKey: 'Hodnik1', spawnX: 7, spawnY: 6, angle: -90 });
+        this.scene.start('Game', { roomKey: 'SobaSirnaTehtnica', spawnX: 1, spawnY: 5, angle: 0 });
     }
 }

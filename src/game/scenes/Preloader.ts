@@ -88,7 +88,8 @@ export class Preloader extends Scene {
         this.load.tilemapTiledJSON('SobaSkrivnePretvorbe', 'Rooms/SobaSkrivnePretvorbe.json');
         this.load.tilemapTiledJSON('SobaSirastiKoti', 'Rooms/SobeSirastiKoti.json');
         this.load.tilemapTiledJSON('Hodnik1', 'Rooms/Hodnik1.json');
-        this.load.tilemapTiledJSON('SobaKrizisce', 'Rooms/SobaKrizisice.json');
+        this.load.tilemapTiledJSON('SobaSirnaTehtnica', 'Rooms/SobaSirnaTehtnica.json');
+        this.load.tilemapTiledJSON('SobaProgress', 'Rooms/SobaProgress.json');
         this.load.tilemapTiledJSON('Start_Room', 'Rooms/StartRoom.json');
     }
 }

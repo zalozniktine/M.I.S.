@@ -1,5 +1,7 @@
 import * as Phaser from 'phaser';
 import { Scene } from 'phaser';
+import { enablePauseMenu } from './PauseMenu';
+import { updateProgressRoomStars} from './Progress';
 
 interface RoomExit {
     x?: number;
@@ -35,14 +37,22 @@ const ROOMS: Record<string, { exits: RoomExit[] }> = {
         exits: [
             // Spodnji izhod -> nazaj v Start_Room
             { y: 14, targetRoom: 'Start_Room', spawnX: 6, spawnY: 1, lookAngle: 0 },
-            // Zgornji izhod -> naprej v SobaKrizisce
-            { y: 1, targetRoom: 'SobaKrizisce', spawnX: 7, spawnY: 10, lookAngle: 180 }
+            // Zgornji izhod -> naprej v SobaSirnaTehtnica
+            { y: 1, targetRoom: 'SobaSirnaTehtnica', spawnX: 7, spawnY: 10, lookAngle: 180 }
         ]
     },
-    'SobaKrizisce': {
+    'SobaSirnaTehtnica': {
         exits: [
             // Spodnji izhod -> nazaj v Hodnik1
-            { y: 11, targetRoom: 'Hodnik1', spawnX: 9, spawnY: 2, lookAngle: 0 }
+            { y: 11, targetRoom: 'Hodnik1', spawnX: 9, spawnY: 2, lookAngle: 0 },
+            // Zgornji izhod -> naprej v SobaProgress
+            { y: 0, targetRoom: 'SobaProgress', spawnX: 7, spawnY: 10, lookAngle: 180 }
+        ]
+    },
+    'SobaProgress': {
+        exits: [
+            // Spodnji izhod -> nazaj v SobaSirnaTehtnica
+            { y: 11, targetRoom: 'SobaSirnaTehtnica', spawnX: 11, spawnY: 1, lookAngle: 0 }
         ]
     }
 };
@@ -82,6 +92,7 @@ export class Game extends Scene {
     }
 
     create() {
+        enablePauseMenu(this);
         this.isMoving = false;
 
         // Select room
@@ -134,7 +145,7 @@ export class Game extends Scene {
         this.collidableLayers.forEach(layer => {
             layer?.setCollisionByExclusion([-1]);
         });
-        collisionLayer?.setVisible(false); // Zakomentiri ce hoces da je collision layer viden
+        //collisionLayer?.setVisible(false); // Zakomentiri ce hoces da je collision layer viden
 
         // Postavitev playerja
         const startX = this.offsetX + (this.tileX + 0.5) * this.tileSizeOnScreen;
@@ -157,21 +168,16 @@ export class Game extends Scene {
         midTopDecoLayer?.setDepth(12);
         topDecoLayer?.setDepth(13);
 
-        // Luknja v Hodnik1 je zarotiran tile brez obrobe -> dorisi 1px crno crto stene (samo v tej sobi)
-        if (this.currentRoom === 'Hodnik1') {
-            this.add.rectangle(
-                this.offsetX + 6 * this.tileSizeOnScreen,
-                this.offsetY + 6 * this.tileSizeOnScreen,
-                scale, this.tileSizeOnScreen, 0x383838
-            ).setOrigin(0, 0).setDepth(0.5);
-        }
-
         this.cursors = this.input.keyboard!.createCursorKeys();
         this.wasd = this.input.keyboard!.addKeys('W,A,S,D') as any;
         this.spaceKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
 
         // transition FADE IN
         this.cameras.main.fadeIn(150, 0, 0, 0);
+
+        if (this.currentRoom === 'SobaProgress') {
+            updateProgressRoomStars(decorationLayer as Phaser.Tilemaps.TilemapLayer | null);
+        }
     }
 
     canMoveTo(targetTileX: number, targetTileY: number): boolean {
@@ -260,9 +266,8 @@ export class Game extends Scene {
                 this.enterMouseHole(9, 5, 'SirastiKoti');
                 return;
             }
-            /// SirnaTehtnica luknja za kavčem v hodniku ko grepš gor
-            if (this.currentRoom === 'Hodnik1' && this.tileX === 7 && this.tileY === 6 && !this.isMoving) {
-                this.enterMouseHole(6, 6, 'SirnaTehtnica', 90);
+            if (this.currentRoom === 'SobaSirnaTehtnica' && this.tileX === 1 && this.tileY === 5 && !this.isMoving) {
+                this.enterMouseHole(1, 4, 'SirnaTehtnica');
                 return;
             }
         }

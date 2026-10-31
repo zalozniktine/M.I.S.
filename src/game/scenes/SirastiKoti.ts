@@ -1,5 +1,7 @@
 import * as Phaser from 'phaser';
 import { Scene } from 'phaser';
+import { enablePauseMenu } from './PauseMenu';
+import { completeLevel } from './Progress';
 
 /*
  * Sirasti koti (Mišja geometrija) – mini igra za 6. razred, matematika.
@@ -91,6 +93,7 @@ export class SirastiKoti extends Scene {
 
     create() {
         // scene.restart() uporabi isto instanco, zato stanje ponastavimo tukaj
+        enablePauseMenu(this, { returnRoom: 'SobaSirastiKoti', spawnX: 9, spawnY: 6 });
         this.tileX = START.x;
         this.tileY = START.y;
         this.isMoving = false;
@@ -614,6 +617,7 @@ export class SirastiKoti extends Scene {
     // ---------------------------------------------------------------------
 
     finishGame() {
+        completeLevel('SirastiKoti');
         this.isFinished = true;
 
         const stars = this.mistakes === 0 ? 3 : this.mistakes <= 3 ? 2 : 1;

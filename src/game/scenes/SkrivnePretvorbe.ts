@@ -1,5 +1,7 @@
 import * as Phaser from 'phaser';
 import { Scene } from 'phaser';
+import { enablePauseMenu } from './PauseMenu';
+import { completeLevel } from './Progress';
 
 export class SkrivnePretvorbe extends Scene {
 
@@ -8,7 +10,7 @@ export class SkrivnePretvorbe extends Scene {
     // Začetna pozicija igralca
     tileX: number = 6;
     tileY: number = 5;
-    
+
     tileSizeOnScreen: number = 64;
     mapScale: number = 2;
 
@@ -36,7 +38,9 @@ export class SkrivnePretvorbe extends Scene {
         super('SkrivnePretvorbe');
     }
     create() {
+        enablePauseMenu(this, { returnRoom: 'SobaSkrivnePretvorbe', spawnX: 12, spawnY: 6 });
         this.isFinished = false;
+        this.numerals = [];
         this.heldNumeral = null;
         this.numerals = [];
 
@@ -365,6 +369,7 @@ export class SkrivnePretvorbe extends Scene {
     }
 
     finishGame() {
+        completeLevel('SkrivnePretvorbe');
         this.isFinished = true;
         this.player.setVelocity(0, 0);
 
